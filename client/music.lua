@@ -41,13 +41,16 @@ local numChunks = 0
 local currentChunk = 0
 
 local playbackQueue = {}
+local loopHistory = {}
 local currentTrack = nil
 local isPlaying = false
+local loopEnabled = false
 local lastPlaybackError = nil
 
 local running = true
 local stopRequested = false
 local skipRequested = false
+local preserveSkippedTrack = false
 
 -- Incrementing this invalidates old playback loops.
 local playbackGeneration = 0
@@ -378,6 +381,13 @@ local function updateMonitors()
 		monitor.setTextColor(colors.yellow)
 		monitor.write(#playbackQueue .. " track(s)")
 
+		monitor.setCursorPos(1, 11)
+		monitor.setTextColor(colors.white)
+		monitor.write("Loop: ")
+
+		monitor.setTextColor(loopEnabled and colors.yellow or colors.gray)
+		monitor.write(loopEnabled and "enabled" or "disabled")
+
 		monitor.setCursorPos(1, 12)
 		monitor.setTextColor(colors.gray)
 		monitor.write("~ 2024-2026 (C) CURVE Technologies ~")
@@ -425,6 +435,9 @@ local function queueTracks(tracks, playNow)
 
 	if playNow then
 		playbackQueue = {}
+		loopHistory = {}
+		skipRequested = false
+		preserveSkippedTrack = false
 
 		for _, track in ipairs(tracks) do
 			table.insert(playbackQueue, track)
@@ -450,8 +463,10 @@ end
 
 local function stopPlayback()
 	playbackQueue = {}
+	loopHistory = {}
 	stopRequested = true
 	skipRequested = false
+	preserveSkippedTrack = false
 
 	interruptCurrentPlayback()
 	updateMonitors()
@@ -464,6 +479,7 @@ local function skipTrack()
 	end
 
 	skipRequested = true
+	preserveSkippedTrack = true
 	interruptCurrentPlayback()
 
 	return true
@@ -471,6 +487,7 @@ end
 
 local function clearQueue()
 	playbackQueue = {}
+	loopHistory = {}
 	updateMonitors()
 	signalPlayer()
 end
@@ -826,6 +843,7 @@ local function playerLoop()
 			lastPlaybackError = nil
 
 			local generation = playbackGeneration
+			local playedTrack = currentTrack
 
 			local callOk, finished, err = pcall(playTrack, currentTrack, generation)
 
@@ -835,17 +853,31 @@ local function playerLoop()
 				lastPlaybackError = tostring(err)
 			end
 
+			if (callOk and finished) or (skipRequested and preserveSkippedTrack) then
+				table.insert(loopHistory, playedTrack)
+			end
+
 			currentTrack = nil
 			isPlaying = false
 
 			if stopRequested then
 				stopRequested = false
 				playbackQueue = {}
+				loopHistory = {}
 				resetRadio()
-			elseif skipRequested then
+			else
 				skipRequested = false
-			elseif #playbackQueue == 0 then
-				resetRadio()
+				preserveSkippedTrack = false
+
+				if #playbackQueue == 0 then
+					if loopEnabled and #loopHistory > 0 then
+						playbackQueue = loopHistory
+						loopHistory = {}
+					else
+						loopHistory = {}
+						resetRadio()
+					end
+				end
 			end
 
 			updateMonitors()
@@ -870,6 +902,7 @@ local function showQueue()
 	end
 
 	term.setTextColor(colors.yellow)
+	print("Loop: " .. (loopEnabled and "enabled" or "disabled"))
 	print("Queue (" .. #playbackQueue .. "):")
 	term.setTextColor(colors.white)
 
@@ -898,6 +931,7 @@ local function showStatus()
 	print("  Progress: " .. currentChunk .. (numChunks > 0 and ("/" .. numChunks) or " chunks"))
 	print("  Volume: " .. string.format("%.1f", radioConfigs.volume) .. " / 3")
 	print("  Queue: " .. #playbackQueue .. " track(s)")
+	print("  Loop: " .. (loopEnabled and "enabled" or "disabled"))
 
 	if lastPlaybackError then
 		term.setTextColor(colors.red)
@@ -918,6 +952,7 @@ local function showHelp()
 	print("  skip                          Skip current track")
 	print("  stop                          Stop playback and clear queue")
 	print("  clear                         Clear upcoming queue only")
+	print("  loop [on|off]                 Toggle queue looping")
 	print("  queue / q                     Show current queue")
 	print("  status                        Show playback status")
 	print("  volume <0-3> / vol <0-3>      Set volume")
@@ -1024,6 +1059,30 @@ local function commandLoop()
 
 				term.setTextColor(colors.yellow)
 				print("Upcoming queue cleared.")
+				term.setTextColor(colors.white)
+			elseif command == "loop" then
+				local mode = argument:lower()
+				local validMode = true
+
+				if mode == "" then
+					loopEnabled = not loopEnabled
+				elseif mode == "on" then
+					loopEnabled = true
+				elseif mode == "off" then
+					loopEnabled = false
+				else
+					validMode = false
+					term.setTextColor(colors.red)
+					print("Use: loop [on|off]")
+				end
+
+				if validMode then
+					updateMonitors()
+
+					term.setTextColor(colors.yellow)
+					print("Queue loop " .. (loopEnabled and "enabled." or "disabled."))
+				end
+
 				term.setTextColor(colors.white)
 			elseif command == "stop" then
 				stopPlayback()

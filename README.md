@@ -8,7 +8,7 @@ This is a yt-dlp based fork of https://github.com/terreng/computercraft-streamin
 - yt-dlp >= `2026.03.17`
 - FFmpeg >= `5.1`
 - Bun >= `1.2.18`
-- Deno >= `2.3.0` at `/usr/local/bin/deno`
+- Deno >= `2.3.0`
 
 FFmpeg must include the `dfpwm` muxer. Check with:
 
@@ -19,7 +19,7 @@ ffmpeg -hide_banner -muxers | grep -w dfpwm
 # Setup
 
 ```bash
-bun install --frozen-lockfile
+bun install
 cp .env.example .env
 bun run start
 ```
