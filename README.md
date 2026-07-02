@@ -45,10 +45,6 @@ and set:
 YT_DLP_COOKIES_PATH=./cookies.txt
 ```
 
-The path may be relative to the server's working directory or absolute.
-`cookies.txt` is ignored by Git and must never be committed. Leave
-`YT_DLP_COOKIES_PATH` empty or unset to run yt-dlp without cookies.
-
 # API
 
 All endpoints use `GET`.
