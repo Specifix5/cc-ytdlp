@@ -1,7 +1,7 @@
 # cc-ytdlp
 
 <!-- prettier-ignore -->
-This is a yt-dlp based fork of https://github.com/terreng/computercraft-streaming-music that does not depend on RapidAPI and Firebase, it is intended for you to self-host and DIY.
+This is a yt-dlp based fork of https://github.com/terreng/computercraft-streaming-music that does not depend on RapidAPI and Firebase, it is a drop in replacement intended for you to self-host and DIY.
 
 # Prerequisites
 
