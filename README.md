@@ -67,7 +67,8 @@ Copy `client/music.lua` onto the ComputerCraft computer and point it at the
 complete `/ipod` endpoint without a trailing slash:
 
 ```lua
-youtubeApi = "https://example.com/ipod",
+-- you should selfhost though!!
+youtubeApi = "https://cc.specifix.dev/ipod",
 youtubeVersion = "2.1",
 ```
 
